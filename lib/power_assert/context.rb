@@ -6,6 +6,7 @@ require 'power_assert/parser'
 module PowerAssert
   class Context
     Value = Struct.new(:name, :value, :lineno, :column, :display_offset)
+    MAX_LINE_LENGTH = 500
 
     def initialize(base_caller_length)
       @fired = false
@@ -88,6 +89,7 @@ module PowerAssert
           line[i] == "\t" ? "\t" : ' '
         end
       end.join
+      
       lines = []
       lines << line.chomp
       lines << sprintf(fmt, vals.each_with_object({}) {|v, h| h[v.display_offset.to_s.to_sym] = '|' }).chomp
@@ -97,10 +99,15 @@ module PowerAssert
           map_to = vals.each_with_object({}) do |j, h|
             h[j.display_offset.to_s.to_sym] = [l, '|', ' '][i.display_offset <=> j.display_offset]
           end
-          lines << encoding_safe_rstrip(sprintf(fmt, map_to))
+          line = encoding_safe_rstrip(sprintf(fmt, map_to))
+          lines << truncate(line, MAX_LINE_LENGTH)
         end
       end
       lines.join("\n")
+    end
+    
+    def truncate(line, length)
+      "#{line[0..length]}#{'...' if line.size > length}"
     end
 
     def detect_path(parser, return_values)
